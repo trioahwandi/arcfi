@@ -11,18 +11,11 @@ export const arcTestnet = {
     decimals: 18,
   },
   rpcUrls: {
-    default: {
-      http: ['https://rpc.testnet.arc.network'],
-    },
-    public: {
-      http: ['https://rpc.testnet.arc.network'],
-    },
+    default: { http: ['https://rpc.testnet.arc.network'] },
+    public: { http: ['https://rpc.testnet.arc.network'] },
   },
   blockExplorers: {
-    default: {
-      name: 'ArcScan',
-      url: 'https://testnet.arcscan.app',
-    },
+    default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' },
   },
   testnet: true,
 };
