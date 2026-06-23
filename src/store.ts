@@ -51,7 +51,7 @@ export interface Proposal {
   endTime: number;
 }
 
-// Arc Testnet Configuration
+// Arc Testnet Configuration - CORRECT VALUES
 export const ARC_CHAIN_ID = 5042002;
 export const ARC_CHAIN_ID_HEX = '0x4D59E6';
 
@@ -60,8 +60,8 @@ export const ARC_TESTNET_CONFIG = {
   chainId: ARC_CHAIN_ID_HEX,
   chainName: 'Arc Testnet',
   nativeCurrency: {
-    name: 'Arc',
-    symbol: 'ARC',
+    name: 'USDC',
+    symbol: 'USDC',
     decimals: 18,
   },
   rpcUrls: ['https://rpc.testnet.arc.network'],
@@ -180,7 +180,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     try {
-      // Only check existing accounts - DO NOT request connection
       const accounts = await ethereum.request({ method: 'eth_accounts' });
       const chain = await ethereum.request({ method: 'eth_chainId' });
 
@@ -249,13 +248,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ walletSwitching: true, walletError: null });
 
     try {
-      // Try to switch to Arc Testnet
+      // Try to switch to Arc Testnet (chainId: 5042002 / 0x4D59E6)
       await ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: ARC_CHAIN_ID_HEX }],
       });
 
-      // Refresh chain state after switch
       const chain = await ethereum.request({ method: 'eth_chainId' });
       set({ walletChainId: parseInt(chain, 16), walletSwitching: false });
     } catch (switchError: any) {
@@ -267,7 +265,6 @@ export const useAppStore = create<AppState>((set, get) => ({
             params: [ARC_TESTNET_CONFIG],
           });
 
-          // Refresh chain state after adding
           const chain = await ethereum.request({ method: 'eth_chainId' });
           set({ walletChainId: parseInt(chain, 16), walletSwitching: false });
         } catch (addError: any) {

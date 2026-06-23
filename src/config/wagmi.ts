@@ -8,16 +8,29 @@ export const arcTestnet = {
   nativeCurrency: {
     name: 'USDC',
     symbol: 'USDC',
-    decimals: 6,
+    decimals: 18,
   },
   rpcUrls: {
-    default: { http: ['https://rpc.testnet.arc.network'] },
-    public: { http: ['https://rpc.testnet.arc.network'] },
+    default: {
+      http: ['https://rpc.testnet.arc.network'],
+    },
+    public: {
+      http: ['https://rpc.testnet.arc.network'],
+    },
   },
   blockExplorers: {
-    default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' },
+    default: {
+      name: 'ArcScan',
+      url: 'https://testnet.arcscan.app',
+    },
   },
   testnet: true,
 };
 
 export const config = {};
+
+declare module 'wagmi' {
+  export interface Register {
+    config: typeof config;
+  }
+}
