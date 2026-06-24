@@ -1,36 +1,34 @@
-// Arc Testnet Configuration
-export const ARC_CHAIN_ID = 5042002;
-export const ARC_CHAIN_ID_HEX = '0x4D59E6';
+import { http, createConfig } from "wagmi"
+import { injected, metaMask, coinbaseWallet } from "wagmi/connectors"
+import { arcTestnet } from "./chains"
 
-export const arcTestnet = {
-  id: ARC_CHAIN_ID,
-  name: 'Arc Testnet',
-  nativeCurrency: {
-    name: 'USDC',
-    symbol: 'USDC',
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://rpc.testnet.arc.network'],
-    },
-    public: {
-      http: ['https://rpc.testnet.arc.network'],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'ArcScan',
-      url: 'https://testnet.arcscan.app',
-    },
-  },
-  testnet: true,
-};
 
-export const config = {};
+export const config = createConfig({
 
-declare module 'wagmi' {
-  export interface Register {
-    config: typeof config;
+  chains: [
+    arcTestnet
+  ],
+
+  connectors: [
+    injected(),
+
+    metaMask(),
+
+    coinbaseWallet({
+      appName: "ArcFi",
+    }),
+  ],
+
+  transports: {
+    [arcTestnet.id]: http(
+      "https://rpc.testnet.arc.network"
+    ),
+  },
+})
+
+
+declare module "wagmi" {
+  interface Register {
+    config: typeof config
   }
 }
