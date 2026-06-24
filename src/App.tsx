@@ -324,7 +324,7 @@ export default function App() {
                   {[
                     { name: 'RPC', value: 'https://rpc.testnet.arc.network' },
                     { name: 'Explorer', value: 'https://testnet.arcscan.app' },
-                    { name: 'Chain ID', value: '5042002 (0x4D59E6)' },
+                    { name: 'Chain ID', value: '5042002 (0x4CEF52)' },
                   ].map((c, i) => (
                     <div key={i} className="flex justify-between p-3 rounded-xl bg-[var(--surface)]">
                       <span className="text-sm font-medium">{c.name}</span>

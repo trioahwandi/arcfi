@@ -1,6 +1,6 @@
 // Arc Testnet Configuration
 export const ARC_CHAIN_ID = 5042002;
-export const ARC_CHAIN_ID_HEX = '0x4D59E6';
+export const ARC_CHAIN_ID_HEX = '0x4CEF52';
 
 export const arcTestnet = {
   id: ARC_CHAIN_ID,
@@ -11,18 +11,11 @@ export const arcTestnet = {
     decimals: 18,
   },
   rpcUrls: {
-    default: {
-      http: ['https://rpc.testnet.arc.network'],
-    },
-    public: {
-      http: ['https://rpc.testnet.arc.network'],
-    },
+    default: { http: ['https://rpc.testnet.arc.network'] },
+    public: { http: ['https://rpc.testnet.arc.network'] },
   },
   blockExplorers: {
-    default: {
-      name: 'ArcScan',
-      url: 'https://testnet.arcscan.app',
-    },
+    default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' },
   },
   testnet: true,
 };
