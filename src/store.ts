@@ -51,18 +51,17 @@ export interface Proposal {
   endTime: number;
 }
 
-// ============================================
-// CORRECT ARC TESTNET CONFIGURATION
-// ============================================
+// Arc Testnet Configuration
 export const ARC_CHAIN_ID = 5042002;
 export const ARC_CHAIN_ID_HEX = '0x4D59E6';
 
+// Arc Testnet chain parameters for wallet_addEthereumChain
 export const ARC_TESTNET_CONFIG = {
   chainId: ARC_CHAIN_ID_HEX,
   chainName: 'Arc Testnet',
   nativeCurrency: {
-    name: 'USDC',
-    symbol: 'USDC',
+    name: 'Arc',
+    symbol: 'ARC',
     decimals: 18,
   },
   rpcUrls: ['https://rpc.testnet.arc.network'],
@@ -91,6 +90,8 @@ interface AppState {
   disconnectWallet: () => void;
   switchToArcTestnet: () => Promise<void>;
   setWalletError: (err: string | null) => void;
+  setWalletConnected: (address: string) => void;
+  setWalletDisconnected: () => void;
   initWallet: () => Promise<void>;
 
   selectVault: (vault: Vault | null) => void;
@@ -142,8 +143,8 @@ function setupWalletListeners(set: (partial: Partial<AppState>) => void) {
     }
   });
 
-  ethereum.on('chainChanged', () => {
-    window.location.reload();
+  ethereum.on('chainChanged', (chain: string) => {
+    set({ walletChainId: parseInt(chain, 16) });
   });
 }
 
@@ -179,6 +180,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     try {
+      // Only check existing accounts - DO NOT request connection
       const accounts = await ethereum.request({ method: 'eth_accounts' });
       const chain = await ethereum.request({ method: 'eth_chainId' });
 
@@ -192,6 +194,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ walletInitialized: true });
       }
     } catch (e) {
+      console.log('Wallet init check failed:', e);
       set({ walletInitialized: true });
     }
 
@@ -201,7 +204,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   connectWallet: async () => {
     const ethereum = (window as any).ethereum;
     if (!ethereum) {
-      set({ walletError: 'No wallet detected. Please install MetaMask.' });
+      set({ walletError: 'No wallet detected. Please install MetaMask or another Web3 wallet.' });
       return;
     }
 
@@ -218,11 +221,14 @@ export const useAppStore = create<AppState>((set, get) => ({
           walletConnecting: false,
           walletInitialized: true,
         });
+      } else {
+        set({ walletConnecting: false, walletInitialized: true });
       }
     } catch (err: any) {
       set({
-        walletError: err.code === 4001 ? 'Connection rejected' : err.message || 'Failed to connect',
+        walletError: err.code === 4001 ? 'Connection rejected by user' : (err.message || 'Failed to connect'),
         walletConnecting: false,
+        walletInitialized: true,
       });
     }
 
@@ -236,48 +242,60 @@ export const useAppStore = create<AppState>((set, get) => ({
   switchToArcTestnet: async () => {
     const ethereum = (window as any).ethereum;
     if (!ethereum) {
-      set({ walletError: 'No wallet detected' });
-      return;
-    }
-
-    const currentChainId = get().walletChainId;
-    
-    // Already on Arc Testnet - no need to switch
-    if (currentChainId === ARC_CHAIN_ID) {
+      set({ walletError: 'No wallet detected. Please install MetaMask.' });
       return;
     }
 
     set({ walletSwitching: true, walletError: null });
 
     try {
+      // Try to switch to Arc Testnet
       await ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: ARC_CHAIN_ID_HEX }],
       });
 
+      // Refresh chain state after switch
       const chain = await ethereum.request({ method: 'eth_chainId' });
       set({ walletChainId: parseInt(chain, 16), walletSwitching: false });
     } catch (switchError: any) {
-      if (switchError.code === 4902) {
+      // If chain not found (error 4902), add it via wallet_addEthereumChain
+      if (switchError.code === 4902 || switchError.message?.includes('Unrecognized chain') || switchError.message?.includes('not recognized')) {
         try {
           await ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [ARC_TESTNET_CONFIG],
           });
+
+          // Refresh chain state after adding
           const chain = await ethereum.request({ method: 'eth_chainId' });
           set({ walletChainId: parseInt(chain, 16), walletSwitching: false });
         } catch (addError: any) {
-          set({ walletError: addError.message || 'Failed to add Arc Testnet', walletSwitching: false });
+          set({
+            walletError: addError.message || 'Failed to add Arc Testnet. Please add it manually in your wallet.',
+            walletSwitching: false,
+          });
         }
       } else if (switchError.code === 4001) {
-        set({ walletError: 'Switch rejected', walletSwitching: false });
+        set({ walletError: 'Network switch rejected by user.', walletSwitching: false });
       } else {
-        set({ walletError: switchError.message || 'Failed to switch', walletSwitching: false });
+        set({
+          walletError: switchError.message || 'Failed to switch network. Please try adding Arc Testnet manually.',
+          walletSwitching: false,
+        });
       }
     }
   },
 
   setWalletError: (err) => set({ walletError: err }),
+
+  setWalletConnected: (address: string) => {
+    set({ walletAddress: address });
+  },
+
+  setWalletDisconnected: () => {
+    set({ walletAddress: null, walletChainId: null, walletError: null });
+  },
 
   selectVault: (vault) => set({ selectedVault: vault }),
 
@@ -287,14 +305,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const now = Date.now();
     const maturityDate = new Date(vault.maturity).getTime();
-    const timeRemaining = Math.max(0, (maturityDate - now) / (1000 * 60 * 60 * 24));
+    const timeRemaining = (maturityDate - now) / (1000 * 60 * 60 * 24);
     const annualYield = amount * (vault.apy / 100);
     const yieldForPeriod = annualYield * (timeRemaining / 365);
+    const ptAmount = amount;
+    const ytAmount = yieldForPeriod;
 
     const newPosition: Position = {
       id: Date.now().toString(),
       vaultId, vaultName: vault.name, asset: vault.asset,
-      ptBalance: amount, ytBalance: yieldForPeriod,
+      ptBalance: ptAmount, ytBalance: ytAmount,
       depositedAmount: amount, yieldAccrued: 0,
       depositTime: now, maturityTime: maturityDate, apy: vault.apy,
     };
@@ -302,7 +322,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newTransaction: Transaction = {
       id: Date.now().toString(), type: 'deposit',
       vaultId, vaultName: vault.name, amount,
-      ptAmount: amount, ytAmount: yieldForPeriod, timestamp: now,
+      ptAmount, ytAmount, timestamp: now,
     };
 
     set(state => ({
@@ -313,7 +333,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ),
     }));
 
-    return { pt: amount, yt: yieldForPeriod };
+    return { pt: ptAmount, yt: ytAmount };
   },
 
   withdraw: (positionId, amount) => {
